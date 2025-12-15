@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
-import { redirect } from "next/navigation"
 import { sql } from "@/lib/db"
+import { ensureUserInDatabase } from "@/lib/clerk"
 import { GroupCard } from "@/components/group-card"
 import { Button } from "@/components/ui/button"
 import { Plus, Users } from "lucide-react"
@@ -9,19 +9,13 @@ import Link from "next/link"
 export default async function DashboardPage() {
   const { userId } = await auth()
 
+  // Middleware already protects this route, so userId will always exist
   if (!userId) {
-    redirect("/sign-in")
+    return null
   }
 
-  // Get user from database
-  const users = await sql`
-    SELECT * FROM "User" WHERE "clerkId" = ${userId}
-  `
-  const user = users[0]
-
-  if (!user) {
-    redirect("/sign-in")
-  }
+  // Ensure user exists in database (creates if missing)
+  const user = await ensureUserInDatabase(userId)
 
   // Get groups where user is a member
   const groups = await sql`
