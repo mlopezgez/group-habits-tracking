@@ -7,35 +7,47 @@ import { Plus, Users } from "lucide-react"
 import Link from "next/link"
 
 export default async function DashboardPage() {
-  const { userId } = await auth()
+  try {
+    const { userId } = await auth()
 
-  // Middleware already protects this route, so userId will always exist
-  if (!userId) {
-    return null
-  }
+    // Middleware already protects this route, so userId will always exist
+    if (!userId) {
+      return null
+    }
 
-  // Ensure user exists in database (creates if missing)
-  const user = await ensureUserInDatabase(userId)
+    // Ensure user exists in database (creates if missing)
+    const user = await ensureUserInDatabase(userId)
 
-  // Get groups where user is a member
-  const groups = await sql`
-    SELECT 
-      g.*,
-      u.name as owner_name,
-      u."profileImage" as owner_image,
-      COUNT(DISTINCT gm.id) as member_count,
-      COUNT(DISTINCT h.id) as habit_count
-    FROM "Group" g
-    INNER JOIN "GroupMember" gm ON g.id = gm."groupId"
-    LEFT JOIN "User" u ON g."ownerId" = u.id
-    LEFT JOIN "GroupMember" gm2 ON g.id = gm2."groupId"
-    LEFT JOIN "Habit" h ON g.id = h."groupId" AND h."isActive" = true
-    WHERE gm."userId" = ${user.id}
-    GROUP BY g.id, u.name, u."profileImage"
-    ORDER BY g."createdAt" DESC
-  `
+    if (!user) {
+      return (
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Error</h1>
+            <p className="mt-2 text-muted-foreground">Unable to load user data</p>
+          </div>
+        </div>
+      )
+    }
 
-  return (
+    // Get groups where user is a member
+    const groups = await sql`
+      SELECT 
+        g.*,
+        u.name as owner_name,
+        u."profileImage" as owner_image,
+        COUNT(DISTINCT gm.id) as member_count,
+        COUNT(DISTINCT h.id) as habit_count
+      FROM "Group" g
+      INNER JOIN "GroupMember" gm ON g.id = gm."groupId"
+      LEFT JOIN "User" u ON g."ownerId" = u.id
+      LEFT JOIN "GroupMember" gm2 ON g.id = gm2."groupId"
+      LEFT JOIN "Habit" h ON g.id = h."groupId" AND h."isActive" = true
+      WHERE gm."userId" = ${user.id}
+      GROUP BY g.id, u.name, u."profileImage"
+      ORDER BY g."createdAt" DESC
+    `
+
+    return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
@@ -84,5 +96,18 @@ export default async function DashboardPage() {
         )}
       </div>
     </div>
-  )
+    )
+  } catch (error) {
+    console.error("Dashboard error:", error)
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold">Error</h1>
+          <p className="mt-2 text-muted-foreground">
+            {error instanceof Error ? error.message : "An error occurred"}
+          </p>
+        </div>
+      </div>
+    )
+  }
 }
