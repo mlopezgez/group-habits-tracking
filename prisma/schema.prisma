@@ -23,6 +23,7 @@ model User {
 
   @@index([clerkId])
   @@index([email])
+  @@map("User")
 }
 
 model Group {
@@ -43,6 +44,7 @@ model Group {
 
   @@index([ownerId])
   @@index([inviteCode])
+  @@map("Group")
 }
 
 model GroupMember {
@@ -59,6 +61,7 @@ model GroupMember {
   @@unique([userId, groupId])
   @@index([userId])
   @@index([groupId])
+  @@map("GroupMember")
 }
 
 model Habit {
@@ -79,6 +82,7 @@ model Habit {
   checkIns    CheckIn[]
 
   @@index([groupId])
+  @@map("Habit")
 }
 
 model CheckIn {
@@ -98,6 +102,7 @@ model CheckIn {
   @@index([userId])
   @@index([habitId])
   @@index([date])
+  @@map("CheckIn")
 }
 
 model ChatMessage {
@@ -113,4 +118,5 @@ model ChatMessage {
 
   @@index([groupId, createdAt])
   @@index([userId])
+  @@map("ChatMessage")
 }

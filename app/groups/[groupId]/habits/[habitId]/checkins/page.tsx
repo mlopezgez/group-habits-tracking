@@ -1,6 +1,6 @@
 import { currentUser } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-import { sql } from "@/lib/db"
+import { prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +8,7 @@ import { CheckCircle2, Calendar } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import Image from "next/image"
 import Link from "next/link"
+import { DeleteCheckinButton } from "@/components/delete-checkin-button"
 
 export default async function CheckinsPage({
   params,
@@ -15,38 +16,77 @@ export default async function CheckinsPage({
   params: Promise<{ groupId: string; habitId: string }>
 }) {
   const { groupId, habitId } = await params
-  const user = await currentUser()
+  const clerkUser = await currentUser()
 
-  if (!user) {
+  if (!clerkUser) {
     redirect("/sign-in")
   }
 
-  // Get habit details
-  const [habit] = await sql`
-    SELECT h.*, g.name as group_name
-    FROM habits h
-    JOIN groups g ON h.group_id = g.id
-    WHERE h.id = ${habitId} AND h.group_id = ${groupId}
-  `
+  // Get the current user from database
+  const dbUser = await prisma.user.findUnique({
+    where: { clerkId: clerkUser.id },
+  })
+
+  if (!dbUser) {
+    redirect("/sign-in")
+  }
+
+  // Get habit details with group information
+  const habit = await prisma.habit.findUnique({
+    where: {
+      id: habitId,
+      groupId: groupId,
+    },
+    include: {
+      group: {
+        select: {
+          name: true,
+        },
+      },
+    },
+  })
 
   if (!habit) {
     redirect("/dashboard")
   }
 
-  // Get all check-ins for this habit
-  const checkins = await sql`
-    SELECT 
-      c.*,
-      u.clerk_id,
-      u.email,
-      u.name,
-      u.image_url
-    FROM checkins c
-    JOIN users u ON c.user_id = u.id
-    WHERE c.habit_id = ${habitId}
-    ORDER BY c.checked_at DESC
-    LIMIT 50
-  `
+  // Get all check-ins for this habit with user information
+  const checkins = await prisma.checkIn.findMany({
+    where: {
+      habitId: habitId,
+    },
+    select: {
+      id: true,
+      date: true,
+      note: true,
+      photoUrl: true,
+      userId: true,
+      user: {
+        select: {
+          clerkId: true,
+          email: true,
+          name: true,
+          profileImage: true,
+        },
+      },
+    },
+    orderBy: {
+      date: "desc",
+    },
+    take: 50,
+  }) as Array<{
+    id: string
+    date: Date
+    note: string | null
+    photoUrl: string | null
+    userId: string
+    user: {
+      clerkId: string
+      email: string
+      name: string | null
+      profileImage: string | null
+    }
+  }>
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -59,7 +99,7 @@ export default async function CheckinsPage({
             ← Back to habit
           </Link>
           <h1 className="text-3xl font-bold text-balance mb-2">{habit.name}</h1>
-          <p className="text-muted-foreground">{habit.group_name}</p>
+          <p className="text-muted-foreground">{habit.group.name}</p>
         </div>
 
         <Card className="mb-6 bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/20">
@@ -87,24 +127,33 @@ export default async function CheckinsPage({
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <Avatar className="h-10 w-10">
-                      <AvatarImage src={checkin.image_url || "/placeholder.svg"} alt={checkin.name} />
+                      <AvatarImage src={checkin.user.profileImage || "/placeholder.svg"} alt={checkin.user.name || ""} />
                       <AvatarFallback>
-                        {checkin.name?.charAt(0) || checkin.email.charAt(0).toUpperCase()}
+                        {checkin.user.name?.charAt(0) || checkin.user.email.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium text-sm">{checkin.name || checkin.email}</p>
-                        <Badge variant="secondary" className="text-xs">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {formatDistanceToNow(new Date(checkin.checked_at), { addSuffix: true })}
-                        </Badge>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{checkin.user.name || checkin.user.email}</p>
+                          <Badge variant="secondary" className="text-xs">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {formatDistanceToNow(new Date(checkin.date), { addSuffix: true })}
+                          </Badge>
+                        </div>
+                        {checkin.userId === dbUser.id && (
+                          <DeleteCheckinButton
+                            checkInId={checkin.id}
+                            groupId={groupId}
+                            habitId={habitId}
+                          />
+                        )}
                       </div>
                       {checkin.note && <p className="text-sm text-muted-foreground mb-2 text-pretty">{checkin.note}</p>}
-                      {checkin.photo_url && (
+                      {checkin.photoUrl && (
                         <div className="relative aspect-video rounded-lg overflow-hidden bg-muted mt-2">
                           <Image
-                            src={checkin.photo_url || "/placeholder.svg"}
+                            src={checkin.photoUrl || "/placeholder.svg"}
                             alt="Check-in photo"
                             fill
                             className="object-cover"

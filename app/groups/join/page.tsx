@@ -5,8 +5,13 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
-export default async function JoinGroupPage() {
+export default async function JoinGroupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string }>
+}) {
   const { userId } = await auth()
+  const { code } = await searchParams
 
   if (!userId) {
     redirect("/sign-in")
@@ -24,10 +29,12 @@ export default async function JoinGroupPage() {
 
         <div className="mb-8">
           <h1 className="text-balance text-3xl font-bold tracking-tight">Join a Group</h1>
-          <p className="mt-2 text-muted-foreground">Enter the invite code to join an existing group</p>
+          <p className="mt-2 text-muted-foreground">
+            Enter the invite link or code to join an existing group
+          </p>
         </div>
 
-        <JoinGroupForm />
+        <JoinGroupForm initialCode={code} />
       </div>
     </div>
   )

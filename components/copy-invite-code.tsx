@@ -11,8 +11,14 @@ interface CopyInviteCodeProps {
 export function CopyInviteCode({ inviteCode }: CopyInviteCodeProps) {
   const [copied, setCopied] = useState(false)
 
+  function getInviteLink() {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://habits.matias-lopez.com"
+    return `${baseUrl}/groups/join/${inviteCode}`
+  }
+
   async function copyToClipboard() {
-    await navigator.clipboard.writeText(inviteCode)
+    const inviteLink = getInviteLink()
+    await navigator.clipboard.writeText(inviteLink)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -27,7 +33,7 @@ export function CopyInviteCode({ inviteCode }: CopyInviteCodeProps) {
       ) : (
         <>
           <Copy className="mr-2 h-4 w-4" />
-          Copy Invite Code
+          Copy Invite Link
         </>
       )}
     </Button>
