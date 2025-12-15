@@ -41,7 +41,8 @@ export function GroupSettings({ group }: GroupSettingsProps) {
         throw new Error(data.error || "Failed to delete group")
       }
 
-      // Redirect to dashboard after successful deletion
+      // Refresh the router cache and redirect to dashboard
+      router.refresh()
       router.push("/dashboard")
     } catch (error) {
       console.error("Error deleting group:", error)

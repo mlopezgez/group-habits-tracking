@@ -18,6 +18,7 @@ model User {
 
   ownedGroups   Group[]  @relation("GroupOwner")
   groupMembers  GroupMember[]
+  userHabits    UserHabit[]
   checkIns      CheckIn[]
   chatMessages  ChatMessage[]
 
@@ -79,6 +80,7 @@ model Habit {
   groupId     String
   group       Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
+  userHabits  UserHabit[]
   checkIns    CheckIn[]
 
   @@index([groupId])
@@ -119,4 +121,20 @@ model ChatMessage {
   @@index([groupId, createdAt])
   @@index([userId])
   @@map("ChatMessage")
+}
+
+model UserHabit {
+  id        String   @id @default(cuid())
+  joinedAt  DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, habitId])
+  @@index([userId])
+  @@index([habitId])
+  @@map("UserHabit")
 }

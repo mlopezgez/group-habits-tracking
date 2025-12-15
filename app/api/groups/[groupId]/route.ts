@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { auth } from "@clerk/nextjs/server"
+import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/db"
 
 export async function DELETE(
@@ -40,6 +41,10 @@ export async function DELETE(
     await prisma.group.delete({
       where: { id: groupId },
     })
+
+    // Revalidate the dashboard and group pages to clear cache
+    revalidatePath("/dashboard")
+    revalidatePath(`/groups/${groupId}`)
 
     return NextResponse.json({ success: true })
   } catch (error) {

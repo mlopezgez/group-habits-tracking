@@ -1,10 +1,11 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-import { sql } from "@/lib/db"
+import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { HabitTracker } from "@/components/habit-tracker"
 import { HabitProgress } from "@/components/habit-progress"
+import { JoinHabitButton } from "@/components/join-habit-button"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
@@ -20,61 +21,115 @@ export default async function HabitDetailPage({ params }: PageProps) {
     redirect("/sign-in")
   }
 
-  const users = await sql`SELECT * FROM "User" WHERE "clerkId" = ${userId}`
-  const user = users[0]
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+  })
 
   if (!user) {
     redirect("/sign-in")
   }
 
   // Check if user is a member
-  const memberships = await sql`
-    SELECT * FROM "GroupMember" 
-    WHERE "userId" = ${user.id} AND "groupId" = ${groupId}
-  `
+  const membership = await prisma.groupMember.findUnique({
+    where: {
+      userId_groupId: {
+        userId: user.id,
+        groupId: groupId,
+      },
+    },
+  })
 
-  if (memberships.length === 0) {
+  if (!membership) {
     redirect("/dashboard")
   }
 
-  // Get habit details
-  const habits = await sql`
-    SELECT h.*, g.name as group_name
-    FROM "Habit" h
-    JOIN "Group" g ON h."groupId" = g.id
-    WHERE h.id = ${habitId} AND h."groupId" = ${groupId}
-  `
+  // Get habit details with tracking status
+  const habit = await prisma.habit.findUnique({
+    where: {
+      id: habitId,
+      groupId: groupId,
+    },
+    include: {
+      group: {
+        select: {
+          name: true,
+        },
+      },
+      userHabits: {
+        where: {
+          userId: user.id,
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+  })
 
-  if (habits.length === 0) {
+  if (!habit) {
     redirect(`/groups/${groupId}`)
   }
 
-  const habit = habits[0]
+  const isTracking = habit.userHabits.length > 0
 
   // Get user's check-ins for this habit (last 30 days)
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const checkIns = await sql`
-    SELECT * FROM "CheckIn"
-    WHERE "habitId" = ${habitId} 
-      AND "userId" = ${user.id}
-      AND date >= ${thirtyDaysAgo.toISOString()}
-    ORDER BY date DESC
-  `
+  const checkIns = await prisma.checkIn.findMany({
+    where: {
+      habitId: habitId,
+      userId: user.id,
+      date: {
+        gte: thirtyDaysAgo,
+      },
+    },
+    orderBy: {
+      date: "desc",
+    },
+  })
 
-  // Get all members' check-ins for today
+  // Get all members' check-ins for today (only from users tracking this habit)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+  const endOfToday = new Date(today)
+  endOfToday.setHours(23, 59, 59, 999)
 
-  const todayCheckIns = await sql`
-    SELECT c.*, u.name, u."profileImage"
-    FROM "CheckIn" c
-    JOIN "User" u ON c."userId" = u.id
-    WHERE c."habitId" = ${habitId}
-      AND DATE(c.date) = DATE(${today.toISOString()})
-    ORDER BY c."createdAt" DESC
-  `
+  // Get users tracking this habit
+  const trackingUsers = await prisma.userHabit.findMany({
+    where: {
+      habitId: habitId,
+    },
+    select: {
+      userId: true,
+    },
+  })
+
+  const trackingUserIds = trackingUsers.map((uh: { userId: string }) => uh.userId)
+
+  const todayCheckIns = await prisma.checkIn.findMany({
+    where: {
+      habitId: habitId,
+      userId: {
+        in: trackingUserIds,
+      },
+      date: {
+        gte: today,
+        lte: endOfToday,
+      },
+    },
+    include: {
+      user: {
+        select: {
+          name: true,
+          profileImage: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  })
 
   return (
     <div className="min-h-screen bg-background">
@@ -82,7 +137,7 @@ export default async function HabitDetailPage({ params }: PageProps) {
         <Button variant="ghost" asChild className="mb-6">
           <Link href={`/groups/${groupId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to {habit.group_name}
+            Back to {habit.group.name}
           </Link>
         </Button>
 
@@ -95,10 +150,17 @@ export default async function HabitDetailPage({ params }: PageProps) {
               {habit.icon || "🎯"}
             </div>
             <div className="flex-1">
-              <h1 className="text-balance text-2xl font-bold tracking-tight">{habit.name}</h1>
-              {habit.description && <p className="mt-2 text-muted-foreground">{habit.description}</p>}
-              <div className="mt-3 text-sm text-muted-foreground">
-                <span className="capitalize">{habit.frequency}</span> • Goal: {habit.targetDays}x per week
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-balance text-2xl font-bold tracking-tight">{habit.name}</h1>
+                  {habit.description && <p className="mt-2 text-muted-foreground">{habit.description}</p>}
+                  <div className="mt-3 text-sm text-muted-foreground">
+                    <span className="capitalize">{habit.frequency}</span> • Goal: {habit.targetDays}x per week
+                  </div>
+                </div>
+                {!isTracking && (
+                  <JoinHabitButton groupId={groupId} habitId={habitId} />
+                )}
               </div>
               <Button variant="link" asChild className="mt-2 h-auto p-0 text-sm">
                 <Link href={`/groups/${groupId}/habits/${habitId}/checkins`}>View all check-ins →</Link>
@@ -107,15 +169,43 @@ export default async function HabitDetailPage({ params }: PageProps) {
           </div>
         </Card>
 
-        <HabitTracker
-          habitId={habitId}
-          groupId={groupId}
-          userId={user.id}
-          checkIns={checkIns}
-          todayCheckIns={todayCheckIns}
-        />
+        {isTracking ? (
+          <>
+            <HabitTracker
+              habitId={habitId}
+              groupId={groupId}
+              userId={user.id}
+              checkIns={checkIns.map((ci: typeof checkIns[0]) => ({
+                id: ci.id,
+                date: ci.date.toISOString(),
+                note: ci.note,
+                photoUrl: ci.photoUrl,
+              }))}
+              todayCheckIns={todayCheckIns.map((ci: typeof todayCheckIns[0]) => ({
+                id: ci.id,
+                name: ci.user.name,
+                profileImage: ci.user.profileImage,
+                createdAt: ci.createdAt.toISOString(),
+                note: ci.note,
+                photoUrl: ci.photoUrl,
+              }))}
+            />
 
-        <HabitProgress habitId={habitId} userId={user.id} targetDays={habit.targetDays} checkIns={checkIns} />
+            <HabitProgress habitId={habitId} userId={user.id} targetDays={habit.targetDays} checkIns={checkIns.map((ci: typeof checkIns[0]) => ({
+              id: ci.id,
+              date: ci.date.toISOString(),
+              note: ci.note,
+              photoUrl: ci.photoUrl,
+            }))} />
+          </>
+        ) : (
+          <Card className="border-border bg-card p-12 text-center">
+            <p className="text-muted-foreground mb-4">
+              You're not tracking this habit yet. Join it to start checking in and see your progress!
+            </p>
+            <JoinHabitButton groupId={groupId} habitId={habitId} />
+          </Card>
+        )}
       </div>
     </div>
   )

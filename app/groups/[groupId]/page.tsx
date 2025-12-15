@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
 import { sql } from "@/lib/db"
+import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -66,12 +67,38 @@ export default async function GroupPage({ params }: PageProps) {
     ORDER BY gm."joinedAt" ASC
   `
 
-  // Get active habits
-  const habits = await sql`
-    SELECT * FROM "Habit"
-    WHERE "groupId" = ${groupId} AND "isActive" = true
-    ORDER BY "createdAt" DESC
-  `
+  // Get active habits with user tracking status
+  const habits = await prisma.habit.findMany({
+    where: {
+      groupId: groupId,
+      isActive: true,
+    },
+    include: {
+      userHabits: {
+        where: {
+          userId: user.id,
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  })
+
+  // Transform habits to include isTracking flag
+  const habitsWithTracking = habits.map((habit) => ({
+    id: habit.id,
+    name: habit.name,
+    description: habit.description,
+    frequency: habit.frequency,
+    targetDays: habit.targetDays,
+    icon: habit.icon,
+    color: habit.color,
+    isTracking: habit.userHabits.length > 0,
+  }))
 
   return (
     <div className="min-h-screen bg-background">
@@ -109,7 +136,7 @@ export default async function GroupPage({ params }: PageProps) {
           </TabsList>
 
           <TabsContent value="habits" className="space-y-6">
-            <HabitsList groupId={group.id} habits={habits} isAdmin={isAdmin} />
+            <HabitsList groupId={group.id} habits={habitsWithTracking} isAdmin={isAdmin} />
           </TabsContent>
 
           <TabsContent value="members" className="space-y-4">

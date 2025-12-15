@@ -37,6 +37,20 @@ export async function POST(
       return NextResponse.json({ error: "Not a member of this group" }, { status: 403 })
     }
 
+    // Check if user is tracking this habit
+    const userHabit = await prisma.userHabit.findUnique({
+      where: {
+        userId_habitId: {
+          userId: user.id,
+          habitId: habitId,
+        },
+      },
+    })
+
+    if (!userHabit) {
+      return NextResponse.json({ error: "You must join this habit before checking in" }, { status: 403 })
+    }
+
     const { date, note, photoUrl } = await request.json()
 
     const checkInDate = date ? new Date(date) : new Date()

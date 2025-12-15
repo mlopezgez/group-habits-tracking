@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Plus, Users } from "lucide-react"
 import Link from "next/link"
 
+// Force dynamic rendering to prevent caching issues
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   try {
     const { userId } = await auth()
