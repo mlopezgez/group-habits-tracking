@@ -1,13 +1,19 @@
-const CACHE_NAME = "habits-together-v1"
-const urlsToCache = ["/", "/dashboard", "/manifest.json", "/icon-192.jpg", "/icon-512.jpg"]
+const CACHE_NAME = "habits-together-v2"
+const urlsToCache = ["/manifest.json", "/icon.svg", "/favicon.svg"]
 
 // Install service worker
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(urlsToCache)
+      // Cache static assets, ignoring failures for dynamic routes
+      return cache.addAll(urlsToCache).catch((error) => {
+        console.log("SW: Cache addAll failed, but continuing:", error)
+        return Promise.resolve()
+      })
     }),
   )
+  // Force the waiting service worker to become the active service worker
+  self.skipWaiting()
 })
 
 // Fetch from cache first, then network
@@ -51,10 +57,14 @@ self.addEventListener("activate", (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log("SW: Deleting old cache:", cacheName)
             return caches.delete(cacheName)
           }
         }),
       )
-    }),
+    }).then(() => {
+      // Take control of all clients immediately
+      return self.clients.claim()
+    })
   )
 })
