@@ -23,10 +23,12 @@ export default async function DashboardPage() {
 
     if (!user) {
       return (
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold">Error</h1>
-            <p className="mt-2 text-muted-foreground">Unable to load user data</p>
+        <div className="min-h-screen bg-background">
+          <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold">Error</h1>
+              <p className="mt-2 text-muted-foreground">Unable to load user data</p>
+            </div>
           </div>
         </div>
       )
@@ -51,8 +53,8 @@ export default async function DashboardPage() {
     `
 
     return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className="min-h-screen bg-background">
+        <div className="mx-auto max-w-7xl px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-balance text-3xl font-bold tracking-tight">Your Groups</h1>
@@ -97,18 +99,20 @@ export default async function DashboardPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
-    </div>
     )
   } catch (error) {
     console.error("Dashboard error:", error)
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold">Error</h1>
-          <p className="mt-2 text-muted-foreground">
-            {error instanceof Error ? error.message : "An error occurred"}
-          </p>
+      <div className="min-h-screen bg-background">
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold">Error</h1>
+            <p className="mt-2 text-muted-foreground">
+              {error instanceof Error ? error.message : "An error occurred"}
+            </p>
+          </div>
         </div>
       </div>
     )

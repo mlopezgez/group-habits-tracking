@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { ClerkProvider } from "@clerk/nextjs"
 import { RegisterServiceWorker } from "./register-sw"
+import { AppHeader } from "@/components/app-header"
+import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
 const _geist = Geist({ subsets: ["latin"] })
@@ -26,19 +28,33 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
+        url: "/favicon.svg",
+        type: "image/svg+xml",
       },
       {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
+        url: "/favicon-16x16.svg",
+        sizes: "16x16",
+        type: "image/svg+xml",
+      },
+      {
+        url: "/favicon-32x32.svg",
+        sizes: "32x32",
+        type: "image/svg+xml",
       },
       {
         url: "/icon.svg",
         type: "image/svg+xml",
+        sizes: "512x512",
       },
     ],
-    apple: "/apple-icon.png",
+    apple: [
+      {
+        url: "/apple-touch-icon.svg",
+        sizes: "180x180",
+        type: "image/svg+xml",
+      },
+    ],
+    shortcut: "/favicon.svg",
   },
 }
 
@@ -74,7 +90,9 @@ export default function RootLayout({
       <html lang="en">
         <body className={`font-sans antialiased`}>
           <RegisterServiceWorker />
+          <AppHeader />
           {children}
+          <Toaster />
           <Analytics />
         </body>
       </html>

@@ -18,8 +18,7 @@ export default async function SignUpPage() {
           <p className="mt-2 text-muted-foreground">Create an account to start tracking habits with friends</p>
         </div>
         <SignUp
-          routing="path"
-          path="/sign-up"
+          routing="virtual"
           signInUrl="/sign-in"
           afterSignUpUrl="/dashboard"
           appearance={{

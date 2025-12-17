@@ -1,0 +1,12 @@
+<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="180" height="180" rx="40" fill="#8b5cf6"/>
+  
+  <!-- Target circles -->
+  <circle cx="90" cy="90" r="55" stroke="white" stroke-width="8" fill="none"/>
+  <circle cx="90" cy="90" r="35" stroke="white" stroke-width="8" fill="none"/>
+  <circle cx="90" cy="90" r="14" fill="white"/>
+  
+  <!-- Cross in center -->
+  <path d="M90 76 L90 104 M76 90 L104 90" stroke="#8b5cf6" stroke-width="4" stroke-linecap="round"/>
+</svg>

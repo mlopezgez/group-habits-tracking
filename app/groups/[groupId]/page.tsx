@@ -10,7 +10,7 @@ import { GroupSettings } from "@/components/group-settings"
 import { HabitsList } from "@/components/habits-list"
 import Link from "next/link"
 import { ArrowLeft, Users, MessageCircle } from "lucide-react"
-import { CopyInviteCode } from "@/components/copy-invite-code"
+import { ShareInviteDialog } from "@/components/share-invite-dialog"
 
 interface PageProps {
   params: Promise<{ groupId: string }>
@@ -118,7 +118,7 @@ export default async function GroupPage({ params }: PageProps) {
               <Users className="h-4 w-4" />
               <span>{members.length} members</span>
             </div>
-            <CopyInviteCode inviteCode={group.inviteCode} />
+            <ShareInviteDialog inviteCode={group.inviteCode} groupName={group.name} />
             <Button variant="outline" size="sm" asChild>
               <Link href={`/groups/${groupId}/chat`}>
                 <MessageCircle className="mr-2 h-4 w-4" />

@@ -12,6 +12,12 @@ self.addEventListener("install", (event) => {
 
 // Fetch from cache first, then network
 self.addEventListener("fetch", (event) => {
+  // Only cache GET requests
+  if (event.request.method !== "GET") {
+    event.respondWith(fetch(event.request))
+    return
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       // Cache hit - return response
