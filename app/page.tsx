@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server"
 import { redirect } from "next/navigation"
-import { SignInButton, SignUpButton } from "@clerk/nextjs"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Check, Users, Target, TrendingUp, Sparkles } from "lucide-react"
 
@@ -23,12 +23,12 @@ export default async function HomePage() {
             <span className="text-lg font-semibold">Habits Together</span>
           </div>
           <div className="flex gap-3">
-            <SignInButton mode="modal">
+            <Link href="/sign-in">
               <Button variant="ghost">Sign In</Button>
-            </SignInButton>
-            <SignUpButton mode="modal">
+            </Link>
+            <Link href="/sign-up">
               <Button>Get Started</Button>
-            </SignUpButton>
+            </Link>
           </div>
         </div>
       </header>
@@ -49,16 +49,16 @@ export default async function HomePage() {
             track daily check-ins, and make habit-building a social experience.
           </p>
           <div className="mt-10 flex justify-center gap-4">
-            <SignUpButton mode="modal">
+            <Link href="/sign-up">
               <Button size="lg" className="h-12 px-8">
                 Start Tracking Free
               </Button>
-            </SignUpButton>
-            <SignInButton mode="modal">
+            </Link>
+            <Link href="/sign-in">
               <Button size="lg" variant="outline" className="h-12 px-8 bg-transparent">
                 Sign In
               </Button>
-            </SignInButton>
+            </Link>
           </div>
         </div>
       </section>
@@ -104,11 +104,11 @@ export default async function HomePage() {
           <h2 className="text-balance text-3xl font-bold tracking-tight sm:text-4xl">Ready to build better habits?</h2>
           <p className="mt-4 text-lg text-muted-foreground">Join thousands of people tracking habits together</p>
           <div className="mt-8">
-            <SignUpButton mode="modal">
+            <Link href="/sign-up">
               <Button size="lg" className="h-12 px-8">
                 Get Started Free
               </Button>
-            </SignUpButton>
+            </Link>
           </div>
         </div>
       </section>
