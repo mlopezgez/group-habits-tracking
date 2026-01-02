@@ -49,25 +49,42 @@ export async function POST(req: Request) {
       return new Response("Error: No email address", { status: 400 })
     }
 
-    // Upsert user in database
-    await sql`
-      INSERT INTO "User" (id, "clerkId", email, name, "profileImage", "createdAt", "updatedAt")
-      VALUES (
-        ${id},
-        ${id},
-        ${email},
-        ${name},
-        ${image_url},
-        NOW(),
-        NOW()
-      )
-      ON CONFLICT ("clerkId") 
-      DO UPDATE SET
-        email = EXCLUDED.email,
-        name = EXCLUDED.name,
-        "profileImage" = EXCLUDED."profileImage",
-        "updatedAt" = NOW()
-    `
+    // Upsert user in database - handle both clerkId and email conflicts
+    try {
+      await sql`
+        INSERT INTO "User" (id, "clerkId", email, name, "profileImage", "createdAt", "updatedAt")
+        VALUES (
+          ${id},
+          ${id},
+          ${email},
+          ${name},
+          ${image_url},
+          NOW(),
+          NOW()
+        )
+        ON CONFLICT ("clerkId") 
+        DO UPDATE SET
+          email = EXCLUDED.email,
+          name = EXCLUDED.name,
+          "profileImage" = EXCLUDED."profileImage",
+          "updatedAt" = NOW()
+      `
+    } catch (error: any) {
+      // Handle email conflict (race condition with ensureUserInDatabase)
+      if (error.code === '23505' && error.constraint === 'User_email_key') {
+        // Update existing user by email to set the clerkId
+        await sql`
+          UPDATE "User" 
+          SET "clerkId" = ${id}, 
+              name = ${name}, 
+              "profileImage" = ${image_url}, 
+              "updatedAt" = NOW()
+          WHERE email = ${email}
+        `
+      } else {
+        throw error
+      }
+    }
   }
 
   if (eventType === "user.deleted") {
